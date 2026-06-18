@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="포크짱 근무기록">
+<meta name="theme-color" content="#1D9E75">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>포크짱 근무기록부</title>
+<style>
+  :root {
+    --green: #1D9E75;
+    --green-dark: #085041;
+    --green-light: #E1F5EE;
+    --green-mid: #0F6E56;
+    --amber: #FAC775;
+    --amber-dark: #633806;
+    --coral: #FAECE7;
+    --coral-dark: #712B13;
+    --purple-bg: #EEEDFE;
+    --purple: #26215C;
+    --purple-mid: #534AB7;
+    --gray-bg: #F5F5F3;
+    --gray-card: #EFEFEC;
+    --gray-border: rgba(0,0,0,0.1);
+    --text: #1A1A1A;
+    --text-sec: #666;
+    --text-hint: #AAA;
+    --white: #fff;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--gray-bg); font-family: -apple-system, 'Helvetica Neue', sans-serif; color: var(--text); overflow: hidden; }
+
+  /* SCREENS */
+  .screen { display: none; flex-direction: column; height: 100vh; height: -webkit-fill-available; }
+  .screen.active { display: flex; }
+
+  /* HEADER */
+  .header {
+    background: var(--green);
+    padding: calc(var(--safe-top) + 14px) 16px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .header-title { color: white; font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  .header-sub { color: rgba(255,255,255,0.75); font-size: 13px; margin-top: 1px; }
+  .header-btn { background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 10px; padding: 7px 10px; font-size: 20px; cursor: pointer; }
+
+  /* SCROLL AREA */
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 14px calc(var(--safe-bot) + 14px); }
+
+  /* SUMMARY CARDS */
+  .summary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .summary-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .card { background: var(--white); border-radius: var(--radius); padding: 13px; }
+  .card.green { background: var(--green-light); }
+  .card.coral { background: var(--coral); }
+  .card.purple { background: var(--purple-bg); }
+  .card.gray { background: var(--gray-card); }
+  .card-label { font-size: 11px; color: var(--text-sec); margin-bottom: 4px; }
+  .card.green .card-label { color: var(--green-mid); }
+  .card.coral .card-label { color: var(--coral-dark); }
+  .card.purple .card-label { color: var(--purple-mid); }
+  .card-val { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
+  .card.green .card-val { color: var(--green-dark); }
+  .card.coral .card-val { color: var(--coral-dark); }
+  .card.purple .card-val { color: var(--purple); }
+  .card-sub { font-size: 11px; color: var(--text-hint); margin-top: 2px; }
+  .card.green .card-sub { color: var(--green); }
+  .card.coral .card-sub { color: #D85A30; }
+  .card.purple .card-sub { color: var(--purple-mid); }
+
+  /* PAY BANNER */
+  .pay-banner {
+    background: var(--green);
+    border-radius: var(--radius);
+    padding: 15px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .pay-label { color: rgba(255,255,255,0.85); font-size: 13px; margin-bottom: 3px; }
+  .pay-amount { color: white; font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  .pay-unit { color: rgba(255,255,255,0.7); font-size: 14px; }
+  .pay-desc { color: rgba(255,255,255,0.65); font-size: 11px; margin-top: 2px; }
+
+  /* MONTH NAV */
+  .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .month-nav-title { font-size: 17px; font-weight: 600; color: var(--text); }
+  .month-nav-btn { background: var(--white); border: none; border-radius: 10px; width: 36px; height: 36px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+  /* CALENDAR */
+  .cal-wrap { background: var(--white); border-radius: var(--radius); overflow: hidden; margin-bottom: 10px; }
+  .cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--gray-card); }
+  .cal-dow-cell { text-align: center; font-size: 11px; font-weight: 600; padding: 8px 0; color: var(--text-sec); }
+  .cal-dow-cell.sun { color: #C0392B; }
+  .cal-dow-cell.sat { color: #185FA5; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cal-cell {
+    border-top: 0.5px solid rgba(0,0,0,0.06);
+    border-right: 0.5px solid rgba(0,0,0,0.06);
+    min-height: 62px; padding: 5px 4px;
+    cursor: pointer; position: relative;
+    -webkit-user-select: none;
+  }
+  .cal-cell:nth-child(7n) { border-right: none; }
+  .cal-cell:active { background: var(--gray-bg); }
+  .cal-cell.empty { cursor: default; background: var(--gray-bg); }
+  .cal-cell.today .cal-num { background: var(--green); color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .cal-num { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 3px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+  .cal-cell.sun .cal-num { color: #C0392B; }
+  .cal-cell.sat .cal-num { color: #185FA5; }
+  .cal-cell.today.sun .cal-num, .cal-cell.today.sat .cal-num { color: white; }
+  .cal-cell.off-day { background: repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(0,0,0,0.03) 5px,rgba(0,0,0,0.03) 10px); }
+  .cal-cell.out-period { background: #F9F9F7; opacity: 0.5; }
+  .cal-badge { font-size: 9px; border-radius: 4px; padding: 1px 4px; display: inline-block; margin-bottom: 2px; font-weight: 600; }
+  .badge-normal { background: #EAF3DE; color: #3B6D11; }
+  .badge-ot { background: #FAECE7; color: #993C1D; }
+  .badge-off { background: #EFEFEC; color: #888; }
+  .cal-hours { font-size: 9px; color: var(--text-sec); }
+  .cal-memo { font-size: 9px; color: var(--text-hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+  /* BOTTOM SHEET MODAL */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 50; }
+  .overlay.open { display: block; }
+  .sheet {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 51;
+    background: var(--white);
+    border-radius: 20px 20px 0 0;
+    padding: 0 0 calc(var(--safe-bot) + 16px);
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  }
+  .sheet.open { transform: translateY(0); }
+  .sheet-handle { width: 36px; height: 4px; background: #DDD; border-radius: 2px; margin: 12px auto 0; }
+  .sheet-header { padding: 12px 20px 0; display: flex; align-items: center; justify-content: space-between; }
+  .sheet-title { font-size: 17px; font-weight: 700; }
+  .sheet-date { font-size: 13px; color: var(--text-sec); margin-top: 2px; }
+  .sheet-close { background: var(--gray-card); border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 16px; cursor: pointer; color: var(--text-sec); display: flex; align-items: center; justify-content: center; }
+  .sheet-body { padding: 16px 20px 0; }
+
+  /* TOGGLE */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 0.5px solid var(--gray-border); }
+  .toggle-label { font-size: 15px; color: var(--text); }
+  .toggle-sw { width: 48px; height: 28px; border-radius: 14px; background: #DDD; border: none; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; }
+  .toggle-sw.on { background: var(--green); }
+  .toggle-sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: left 0.2s; }
+  .toggle-sw.on::after { left: 23px; }
+
+  /* HOURS PICKER */
+  .hours-section { padding-top: 14px; }
+  .section-label { font-size: 13px; color: var(--text-sec); margin-bottom: 8px; font-weight: 500; }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .preset { background: var(--gray-card); border: none; border-radius: 20px; padding: 8px 16px; font-size: 14px; cursor: pointer; color: var(--text); font-weight: 500; }
+  .preset.active { background: var(--green); color: white; }
+  .stepper { display: flex; align-items: center; gap: 0; background: var(--gray-card); border-radius: 14px; overflow: hidden; margin-bottom: 10px; }
+  .step-btn { background: none; border: none; width: 52px; height: 50px; font-size: 26px; cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center; }
+  .step-btn:active { background: rgba(0,0,0,0.08); }
+  .step-val { flex: 1; text-align: center; font-size: 20px; font-weight: 700; color: var(--green-dark); }
+  .direct-input-row { display: flex; align-items: center; gap: 8px; }
+  .direct-input { width: 90px; background: var(--gray-card); border: none; border-radius: var(--radius-sm); padding: 10px 12px; font-size: 18px; font-weight: 700; color: var(--green-dark); text-align: center; font-family: inherit; outline: none; }
+  .direct-input:focus { background: #E1F5EE; }
+  .direct-label { font-size: 15px; color: var(--text-sec); }
+  /* HOLIDAY */
+  .cal-cell.holiday .cal-num { color: #C0392B; }
+  .cal-cell.today.holiday .cal-num { color: white; }
+
+  /* MEMO */
+  .memo-section { padding-top: 10px; }
+  .memo-input { width: 100%; background: var(--gray-card); border: none; border-radius: var(--radius-sm); padding: 12px 14px; font-size: 15px; color: var(--text); font-family: inherit; outline: none; }
+  .memo-input::placeholder { color: var(--text-hint); }
+
+  /* SHEET ACTIONS */
+  .sheet-actions { display: flex; gap: 10px; padding: 16px 20px 0; }
+  .btn-primary { flex: 1; background: var(--green); color: white; border: none; border-radius: var(--radius-sm); padding: 15px; font-size: 16px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .btn-primary:active { background: var(--green-mid); }
+  .btn-secondary { background: var(--gray-card); color: var(--text); border: none; border-radius: var(--radius-sm); padding: 15px 18px; font-size: 16px; cursor: pointer; font-family: inherit; }
+  .btn-danger { background: #FDECEA; color: #C0392B; border: none; border-radius: var(--radius-sm); padding: 15px 14px; font-size: 15px; cursor: pointer; font-family: inherit; }
+
+  /* HISTORY SCREEN */
+  .hist-month { background: var(--white); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+  .hist-month-title { font-size: 15px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+  .hist-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-top: 0.5px solid var(--gray-border); font-size: 14px; }
+  .hist-key { color: var(--text-sec); }
+  .hist-val { font-weight: 600; color: var(--text); }
+  .hist-pay { color: var(--green-dark); }
+  .empty-hist { text-align: center; color: var(--text-hint); padding: 40px 0; font-size: 15px; }
+</style>
+</head>
+<body>
+
+<!-- MAIN SCREEN -->
+<div class="screen active" id="screen-main">
+  <div class="header">
+    <div>
+      <div class="header-title" id="main-title">포크짱 근무기록부</div>
+      <div class="header-sub" id="main-sub"></div>
+    </div>
+    <button class="header-btn" onclick="showScreen('screen-hist')" title="기록 보관함">📋</button>
+  </div>
+  <div class="scroll">
+    <div class="summary-row">
+      <div class="card">
+        <div class="card-label">총 근무일</div>
+        <div class="card-val" id="s-days">0일</div>
+        <div class="card-sub" id="s-period-sub">정산 기간</div>
+      </div>
+      <div class="card">
+        <div class="card-label">총 근무시간</div>
+        <div class="card-val" id="s-total">0시간</div>
+        <div class="card-sub">기본 + 연장</div>
+      </div>
+    </div>
+    <div class="summary-row3">
+      <div class="card" id="card-base">
+        <div class="card-label">기본급 시간</div>
+        <div class="card-val" id="s-base">0시간</div>
+        <div class="card-sub">200시간 보장</div>
+      </div>
+      <div class="card" id="card-ot">
+        <div class="card-label">연장 시간</div>
+        <div class="card-val" id="s-ot">0시간</div>
+        <div class="card-sub" id="s-ot-sub">200시간 초과분</div>
+      </div>
+      <div class="card" id="card-remain">
+        <div class="card-label">남은 시간</div>
+        <div class="card-val" id="s-remain">200시간</div>
+        <div class="card-sub" id="s-remain-sub">200시간까지</div>
+      </div>
+    </div>
+    <div class="pay-banner">
+      <div>
+        <div class="pay-label" id="s-pay-period">이번 정산 연장수당</div>
+        <div class="pay-amount"><span id="s-pay">0</span><span class="pay-unit">원</span></div>
+        <div class="pay-desc" id="s-pay-desc">연장 시간 × 30,000원</div>
+      </div>
+      <div style="font-size:36px;">💰</div>
+    </div>
+
+    <div class="month-nav">
+      <button class="month-nav-btn" onclick="changeMonth(-1)">‹</button>
+      <span class="month-nav-title" id="cal-title"></span>
+      <button class="month-nav-btn" onclick="changeMonth(1)">›</button>
+    </div>
+
+    <div class="cal-wrap">
+      <div class="cal-dow">
+        <div class="cal-dow-cell sun">일</div>
+        <div class="cal-dow-cell">월</div>
+        <div class="cal-dow-cell">화</div>
+        <div class="cal-dow-cell">수</div>
+        <div class="cal-dow-cell">목</div>
+        <div class="cal-dow-cell">금</div>
+        <div class="cal-dow-cell sat">토</div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY SCREEN -->
+<div class="screen" id="screen-hist">
+  <div class="header">
+    <div>
+      <div class="header-title">기록 보관함</div>
+      <div class="header-sub">월별 근무 내역</div>
+    </div>
+    <button class="header-btn" onclick="showScreen('screen-main')">✕</button>
+  </div>
+  <div class="scroll" id="hist-body"></div>
+</div>
+
+<!-- OVERLAY & SHEET -->
+<div class="overlay" id="overlay" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div>
+      <div class="sheet-title" id="sheet-title">근무 기록</div>
+      <div class="sheet-date" id="sheet-date"></div>
+    </div>
+    <button class="sheet-close" onclick="closeSheet()">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="toggle-row">
+      <span class="toggle-label">근무함</span>
+      <button class="toggle-sw" id="toggle-worked" onclick="toggleWorked()"></button>
+    </div>
+    <div id="work-fields">
+      <div class="hours-section">
+        <div class="section-label">근무 시간</div>
+        <div class="presets" id="presets">
+          <button class="preset" onclick="setH(6)">6h</button>
+          <button class="preset" onclick="setH(7)">7h</button>
+          <button class="preset active" onclick="setH(8)">8h</button>
+          <button class="preset" onclick="setH(9)">9h</button>
+          <button class="preset" onclick="setH(10)">10h</button>
+          <button class="preset" onclick="setH(10.5)">10.5h</button>
+          <button class="preset" onclick="setH(11)">11h</button>
+          <button class="preset" onclick="setH(12)">12h</button>
+        </div>
+        <div class="stepper">
+          <button class="step-btn" onclick="stepH(-0.5)">−</button>
+          <span class="step-val" id="step-val">8시간</span>
+          <button class="step-btn" onclick="stepH(0.5)">+</button>
+        </div>
+        <div class="direct-input-row">
+          <input class="direct-input" id="direct-h" type="number" min="0.5" max="24" step="0.5" value="8" oninput="directInput()" />
+          <span class="direct-label">시간 직접 입력</span>
+        </div>
+      </div>
+      <div class="memo-section">
+        <div class="section-label" style="margin-top:14px;">메모 (선택)</div>
+        <input class="memo-input" id="inp-memo" type="text" placeholder="현장명 등" />
+      </div>
+    </div>
+  </div>
+  <div class="sheet-actions">
+    <button class="btn-danger" id="btn-delete" onclick="deleteRec()">삭제</button>
+    <button class="btn-secondary" onclick="closeSheet()">취소</button>
+    <button class="btn-primary" onclick="saveRec()">저장</button>
+  </div>
+</div>
+
+<script>
+const NORMAL = 8, GUAR = 200, OT_RATE = 30000;
+const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+const DAYS = ['일','월','화','수','목','금','토'];
+
+// 한국 공휴일 (YYYY-MM-DD) - 출처: 인사혁신처 고시 기준
+const HOLIDAYS = new Set([
+  // 2026
+  '2026-01-01',                                        // 신정
+  '2026-02-16','2026-02-17','2026-02-18',              // 설날 연휴
+  '2026-03-01','2026-03-02',                           // 삼일절 + 대체
+  '2026-05-01',                                        // 근로자의 날(노동절 공휴일 확정)
+  '2026-05-05',                                        // 어린이날
+  '2026-05-24','2026-05-25',                           // 부처님오신날 + 대체
+  '2026-06-06',                                        // 현충일
+  '2026-07-17',                                        // 제헌절(2026년 부활)
+  '2026-08-15','2026-08-17',                           // 광복절 + 대체
+  '2026-09-24','2026-09-25','2026-09-26','2026-09-28', // 추석 연휴 + 대체
+  '2026-10-03','2026-10-05',                           // 개천절 + 대체
+  '2026-10-09',                                        // 한글날
+  '2026-12-25',                                        // 크리스마스
+  // 2027
+  '2027-01-01',                                        // 신정
+  '2027-02-06','2027-02-07','2027-02-08','2027-02-09', // 설날 연휴 + 대체
+  '2027-03-01',                                        // 삼일절
+  '2027-05-01',                                        // 근로자의 날
+  '2027-05-05',                                        // 어린이날
+  '2027-05-13',                                        // 부처님오신날
+  '2027-06-06',                                        // 현충일
+  '2027-07-17',                                        // 제헌절
+  '2027-08-15','2027-08-16',                           // 광복절 + 대체
+  '2027-09-14','2027-09-15','2027-09-16',              // 추석 연휴
+  '2027-10-03','2027-10-04',                           // 개천절 + 대체
+  '2027-10-09','2027-10-11',                           // 한글날 + 대체
+  '2027-12-25','2027-12-27',                           // 크리스마스 + 대체
+  // 2028
+  '2028-01-26','2028-01-27','2028-01-28',              // 설날 연휴
+  '2028-03-01',                                        // 삼일절
+  '2028-04-12',                                        // 국회의원 선거
+  '2028-05-01',                                        // 근로자의 날
+  '2028-05-02',                                        // 부처님오신날
+  '2028-05-05',                                        // 어린이날
+  '2028-06-06',                                        // 현충일
+  '2028-07-17',                                        // 제헌절
+  '2028-08-15',                                        // 광복절
+  '2028-10-02','2028-10-03','2028-10-04','2028-10-05', // 추석+개천절 연휴 + 대체
+  '2028-10-09',                                        // 한글날
+  '2028-12-25',                                        // 크리스마스
+]);
+
+let cy = new Date().getFullYear(), cm = new Date().getMonth();
+let editKey = null, workedOn = true, curH = 8;
+
+// --- STORAGE ---
+function loadRecs() {
+  try { return JSON.parse(localStorage.getItem('work_recs') || '{}'); } catch(e) { return {}; }
+}
+function saveRecs(r) {
+  try { localStorage.setItem('work_recs', JSON.stringify(r)); } catch(e) {}
+}
+let records = loadRecs();
+
+// --- UTILS ---
+function fmtH(h) {
+  if (h === 0) return '0시간';
+  const w = Math.floor(h), half = (h - w) >= 0.5;
+  return half ? w + '.5시간' : w + '시간';
+}
+function fmtWon(n) { return n.toLocaleString('ko-KR'); }
+function prefix() { return cy + '-' + String(cm+1).padStart(2,'0') + '-'; }
+
+// --- 정산 기간: 전달 21일 ~ 이달 20일 ---
+// cy, cm 은 "현재 보고 있는 달력 달" 기준
+// 정산 기간은 그 달의 21일~다음달 20일
+function getPeriod(y, m) {
+  // 정산 시작: 전달 21일, 종료: 이달 20일
+  // 달력 month m 기준 → 정산기간 = (m-1)년월 21일 ~ m년월 20일
+  let sy = y, sm = m - 1;
+  if (sm < 0) { sm = 11; sy -= 1; }
+  const start = sy + '-' + String(sm+1).padStart(2,'0') + '-21';
+  const end   = y  + '-' + String(m+1).padStart(2,'0')  + '-20';
+  return { sy, sm, ey: y, em: m, start, end };
+}
+
+function inPeriod(key, p) {
+  return key >= p.start && key <= p.end;
+}
+
+function fmtPeriod(p) {
+  return (p.sm+1) + '/21 ~ ' + (p.em+1) + '/20';
+}
+
+// --- SUMMARY ---
+function calcSummary(y, m) {
+  const p = getPeriod(y, m);
+  let days = 0, total = 0;
+  Object.keys(records).forEach(k => {
+    if (!inPeriod(k, p)) return;
+    const r = records[k];
+    if (!r || !r.worked) return;
+    days++; total += parseFloat(r.hours) || NORMAL;
+  });
+  const otH = total > GUAR ? total - GUAR : 0;
+  const baseH = Math.min(total, GUAR);
+  const remain = Math.max(0, GUAR - total);
+  return { days, total, otH, baseH, remain, pay: otH * OT_RATE, period: p };
+}
+
+// --- RENDER ---
+function render() {
+  document.getElementById('main-title').textContent = '포크짱 근무기록부';
+  document.getElementById('cal-title').textContent = cy + '년 ' + MONTHS[cm];
+
+  const s = calcSummary(cy, cm);
+  const periodStr = fmtPeriod(s.period);
+  document.getElementById('main-sub').textContent = '정산: ' + periodStr;
+  document.getElementById('s-period-sub').textContent = periodStr;
+  document.getElementById('s-pay-period').textContent = periodStr + ' 연장수당';
+
+  document.getElementById('s-days').textContent = s.days + '일';
+  document.getElementById('s-total').textContent = fmtH(s.total);
+  document.getElementById('s-base').textContent = fmtH(s.baseH);
+  document.getElementById('s-ot').textContent = fmtH(s.otH);
+  document.getElementById('s-remain').textContent = s.remain > 0 ? fmtH(s.remain) : '달성!';
+  document.getElementById('s-remain-sub').textContent = s.remain > 0 ? '200시간까지' : '200시간 달성 ✓';
+  document.getElementById('s-pay').textContent = fmtWon(s.pay);
+  document.getElementById('s-pay-desc').textContent = s.otH > 0 ? fmtH(s.otH) + ' × 30,000원' : '200시간 초과 시 발생';
+
+  const cardOt = document.getElementById('card-ot');
+  cardOt.className = 'card' + (s.otH > 0 ? ' coral' : '');
+  document.getElementById('s-ot-sub').textContent = s.otH > 0 ? '연장수당 발생!' : '200시간 초과분';
+
+  const cardRemain = document.getElementById('card-remain');
+  cardRemain.className = 'card' + (s.remain === 0 ? ' green' : '');
+
+  renderCal();
+}
+
+function renderCal() {
+  const first = new Date(cy, cm, 1).getDay();
+  const dim = new Date(cy, cm + 1, 0).getDate();
+  const today = new Date();
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+  const p = getPeriod(cy, cm);
+
+  for (let i = 0; i < first; i++) {
+    const c = document.createElement('div');
+    c.className = 'cal-cell empty';
+    grid.appendChild(c);
+  }
+
+  for (let d = 1; d <= dim; d++) {
+    const dow = new Date(cy, cm, d).getDay();
+    const key = cy + '-' + String(cm+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const isInPeriod = inPeriod(key, p);
+    const rec = records[key];
+    const isToday = d === today.getDate() && cm === today.getMonth() && cy === today.getFullYear();
+
+    const cell = document.createElement('div');
+    let cls = 'cal-cell';
+    if (dow === 0) cls += ' sun';
+    if (dow === 6) cls += ' sat';
+    if (isToday) cls += ' today';
+    if (!isInPeriod) cls += ' out-period';
+    if (HOLIDAYS.has(key) && dow !== 0) cls += ' holiday';
+
+    const num = document.createElement('div');
+    num.className = 'cal-num';
+    num.textContent = d;
+    cell.appendChild(num);
+
+    if (d === 21) {
+      const tag = document.createElement('div');
+      tag.style.cssText = 'font-size:8px;color:#1D9E75;font-weight:700;margin-bottom:1px;';
+      tag.textContent = '▶ 정산시작';
+      cell.appendChild(tag);
+    }
+    if (d === 20) {
+      const tag = document.createElement('div');
+      tag.style.cssText = 'font-size:8px;color:#D85A30;font-weight:700;margin-bottom:1px;';
+      tag.textContent = '◀ 정산마감';
+      cell.appendChild(tag);
+    }
+
+    if (rec) {
+      if (!rec.worked) {
+        cls += ' off-day';
+        const b = document.createElement('div');
+        b.className = 'cal-badge badge-off';
+        b.textContent = '휴무';
+        cell.appendChild(b);
+      } else {
+        const h = parseFloat(rec.hours) || NORMAL;
+        const ot = h > NORMAL ? h - NORMAL : 0;
+        const b = document.createElement('div');
+        b.className = 'cal-badge ' + (ot > 0 ? 'badge-ot' : 'badge-normal');
+        b.textContent = ot > 0 ? '연장 ' + fmtH(ot) : '정상';
+        cell.appendChild(b);
+        const t = document.createElement('div');
+        t.className = 'cal-hours';
+        t.textContent = fmtH(h);
+        cell.appendChild(t);
+        if (rec.memo) {
+          const m = document.createElement('div');
+          m.className = 'cal-memo';
+          m.textContent = rec.memo;
+          cell.appendChild(m);
+        }
+      }
+    } else if (dow >= 1 && dow <= 6 && isInPeriod) {
+      const hint = document.createElement('div');
+      hint.className = 'cal-hours';
+      hint.style.color = '#CCC';
+      hint.textContent = '+';
+      cell.appendChild(hint);
+    }
+
+    cell.className = cls;
+    cell.addEventListener('click', () => openSheet(key, d, dow));
+    grid.appendChild(cell);
+  }
+}
+
+// --- MONTH NAV ---
+function changeMonth(d) {
+  cm += d;
+  if (cm > 11) { cm = 0; cy++; }
+  if (cm < 0) { cm = 11; cy--; }
+  render();
+}
+
+// --- SHEET ---
+function openSheet(key, d, dow) {
+  editKey = key;
+  const rec = records[key];
+  document.getElementById('sheet-date').textContent = cy + '년 ' + MONTHS[cm] + ' ' + d + '일 (' + DAYS[dow] + ')';
+  workedOn = rec ? rec.worked : true;
+  curH = rec && rec.worked ? (parseFloat(rec.hours) || NORMAL) : NORMAL;
+  document.getElementById('inp-memo').value = rec && rec.memo ? rec.memo : '';
+  document.getElementById('btn-delete').style.display = rec ? '' : 'none';
+  updateToggle();
+  updateHours();
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+}
+
+function closeSheet() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
+  editKey = null;
+}
+
+function toggleWorked() {
+  workedOn = !workedOn;
+  updateToggle();
+}
+function updateToggle() {
+  document.getElementById('toggle-worked').className = 'toggle-sw' + (workedOn ? ' on' : '');
+  document.getElementById('work-fields').style.display = workedOn ? '' : 'none';
+}
+
+function setH(h) { curH = h; updateHours(); }
+function stepH(d) { curH = Math.max(0.5, Math.min(24, Math.round((curH + d) * 2) / 2)); updateHours(); }
+function directInput() {
+  const v = parseFloat(document.getElementById('direct-h').value);
+  if (!isNaN(v) && v >= 0.5 && v <= 24) { curH = Math.round(v * 2) / 2; updateHoursNoInput(); }
+}
+function updateHours() {
+  document.getElementById('step-val').textContent = fmtH(curH);
+  document.getElementById('direct-h').value = curH;
+  document.querySelectorAll('.preset').forEach(btn => {
+    btn.classList.toggle('active', parseFloat(btn.textContent) === curH);
+  });
+}
+function updateHoursNoInput() {
+  document.getElementById('step-val').textContent = fmtH(curH);
+  document.querySelectorAll('.preset').forEach(btn => {
+    btn.classList.toggle('active', parseFloat(btn.textContent) === curH);
+  });
+}
+
+function saveRec() {
+  if (!editKey) return;
+  records[editKey] = {
+    worked: workedOn,
+    hours: workedOn ? curH : null,
+    memo: workedOn ? document.getElementById('inp-memo').value.trim() : ''
+  };
+  saveRecs(records);
+  closeSheet();
+  render();
+}
+
+function deleteRec() {
+  if (!editKey) return;
+  delete records[editKey];
+  saveRecs(records);
+  closeSheet();
+  render();
+}
+
+// --- HISTORY SCREEN ---
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'screen-hist') renderHist();
+}
+
+function renderHist() {
+  const body = document.getElementById('hist-body');
+  // 정산 기간 기준으로 그룹핑: 각 달의 정산기간(전달21~이달20) 단위
+  const monthSet = new Set();
+  Object.keys(records).forEach(k => {
+    const [ky, km] = k.split('-').map(Number);
+    const day = parseInt(k.split('-')[2]);
+    // 21일 이후면 다음달 정산, 20일 이하면 이달 정산
+    if (day >= 21) {
+      let ny = ky, nm = km; // 다음달 기준
+      nm += 1;
+      if (nm > 12) { nm = 1; ny++; }
+      monthSet.add(ny + '-' + String(nm).padStart(2,'0'));
+    } else {
+      monthSet.add(ky + '-' + String(km).padStart(2,'0'));
+    }
+  });
+  const sorted = Array.from(monthSet).sort((a,b) => b.localeCompare(a));
+  if (sorted.length === 0) {
+    body.innerHTML = '<div class="empty-hist">아직 기록이 없어요</div>';
+    return;
+  }
+  body.innerHTML = '';
+  sorted.forEach(ym => {
+    const [y, m] = ym.split('-').map(Number);
+    const s = calcSummary(y, m - 1);
+    const div = document.createElement('div');
+    div.className = 'hist-month';
+    div.innerHTML = `
+      <div class="hist-month-title">${fmtPeriod(s.period)}</div>
+      <div class="hist-row"><span class="hist-key">총 근무일</span><span class="hist-val">${s.days}일</span></div>
+      <div class="hist-row"><span class="hist-key">총 근무시간</span><span class="hist-val">${fmtH(s.total)}</span></div>
+      <div class="hist-row"><span class="hist-key">기본급 시간</span><span class="hist-val">${fmtH(s.baseH)}</span></div>
+      <div class="hist-row"><span class="hist-key">연장수당 시간</span><span class="hist-val">${fmtH(s.otH)}</span></div>
+      <div class="hist-row"><span class="hist-key">연장수당</span><span class="hist-val hist-pay">${fmtWon(s.pay)}원</span></div>
+    `;
+    body.appendChild(div);
+  });
+}
+
+// --- SERVICE WORKER ---
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+render();
+</script>
+</body>
+</html>
